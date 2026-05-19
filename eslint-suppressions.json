@@ -317,11 +317,6 @@
       "count": 1
     }
   },
-  "src/lib/routes/types.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 1
-    }
-  },
   "src/lib/strings/errors.ts": {
     "@typescript-eslint/no-explicit-any": {
       "count": 1
