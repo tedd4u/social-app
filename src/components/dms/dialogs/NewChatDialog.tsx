@@ -5,6 +5,7 @@ import {useRequireEmailVerification} from '#/lib/hooks/useRequireEmailVerificati
 import {logger} from '#/logger'
 import {useCreateGroupChat} from '#/state/queries/messages/create-group-chat'
 import {useGetConvoForMembers} from '#/state/queries/messages/get-convo-for-members'
+import {useChatActorStatusQuery} from '#/state/queries/messages/get-status'
 import {FAB} from '#/view/com/util/fab/FAB'
 import {useTheme} from '#/alf'
 import * as Dialog from '#/components/Dialog'
@@ -25,6 +26,8 @@ export function NewChat({
   const {t: l} = useLingui()
   const ax = useAnalytics()
   const requireEmailVerification = useRequireEmailVerification()
+  const {data: chatStatus} = useChatActorStatusQuery()
+  const chatDisabled = !!chatStatus?.chatDisabled
 
   const isGroupChatEnabled = ax.features.enabled(ax.features.GroupChatsEnable)
 
@@ -99,14 +102,16 @@ export function NewChat({
 
   return (
     <>
-      <FAB
-        testID="newChatFAB"
-        onPress={wrappedOnPress}
-        icon={<NewChatIcon size="lg" fill={t.palette.white} />}
-        accessibilityRole="button"
-        accessibilityLabel={l`New chat`}
-        accessibilityHint=""
-      />
+      {!chatDisabled && (
+        <FAB
+          testID="newChatFAB"
+          onPress={wrappedOnPress}
+          icon={<NewChatIcon size="lg" fill={t.palette.white} />}
+          accessibilityRole="button"
+          accessibilityLabel={l`New chat`}
+          accessibilityHint=""
+        />
+      )}
       <Dialog.Outer
         control={control}
         testID="newChatDialog"
