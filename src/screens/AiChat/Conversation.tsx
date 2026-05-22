@@ -61,24 +61,29 @@ export function AiChatConversationScreen({route}: Props) {
     configureBskyStats(BACKEND_URL, API_KEY)
   }, [])
 
-  // Load persona status + chat history on mount
+  // Load persona status + chat history on mount.
+  // Fetched independently so a chat-history failure (e.g. persona not
+  // created yet) doesn't prevent persona status from being set.
   useEffect(() => {
     let cancelled = false
     async function load() {
       try {
-        const [status, history] = await Promise.all([
-          fetchPersonaStatus(handle),
-          fetchChatHistory(handle),
-        ])
+        const status = await fetchPersonaStatus(handle)
         if (cancelled) return
         setPersona(status)
-        setMessages(history.messages)
-      } catch (err) {
-        if (cancelled) return
-        setError(err instanceof Error ? err.message : String(err))
-      } finally {
-        if (!cancelled) setLoading(false)
+      } catch {
+        // Persona may not exist yet — polling will pick it up
       }
+
+      try {
+        const history = await fetchChatHistory(handle)
+        if (cancelled) return
+        setMessages(history.messages)
+      } catch {
+        // No history yet for new personas
+      }
+
+      if (!cancelled) setLoading(false)
     }
     void load()
     return () => {
@@ -86,9 +91,10 @@ export function AiChatConversationScreen({route}: Props) {
     }
   }, [handle])
 
-  // Poll persona status while it's still loading posts
+  // Poll persona status while it's not yet ready.
+  // Covers: persona is null (not created yet), still loading, or errored.
   useEffect(() => {
-    if (!persona || persona.status !== 'loading') return
+    if (persona?.status === 'ready') return
 
     const interval = setInterval(() => {
       void (async () => {
