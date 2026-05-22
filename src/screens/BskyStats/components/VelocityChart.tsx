@@ -27,12 +27,13 @@ export function VelocityChart({
   // Show enough data points to cover the selected window
   const barCount = Math.floor(windowSeconds / BUCKET_INTERVAL_S)
   const data = history.slice(-barCount)
-  // Use the 99th-percentile value as the chart ceiling so that a single
-  // outlier spike (e.g. reconnection backlog flush) doesn't compress
-  // all the normal bars into invisible slivers.
+  // Use the 95th-percentile value as the chart ceiling so that outlier
+  // spikes (e.g. reconnection backlog flush, firehose anomalies) don't
+  // compress all the normal bars into invisible slivers.  p95 works
+  // well even for the 1-minute window (30 bars → top 2 clipped).
   const sorted = [...data].sort((x, y) => x - y)
-  const p99 = sorted[Math.floor(sorted.length * 0.99)] ?? 1
-  const max = Math.max(p99, 1)
+  const p95 = sorted[Math.floor(sorted.length * 0.95)] ?? 1
+  const max = Math.max(p95, 1)
 
   return (
     <View
