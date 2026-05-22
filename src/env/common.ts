@@ -151,3 +151,11 @@ export const APP_CONFIG_PROD_URL = `https://app-config.workers.bsky.app`
 export const APP_CONFIG_URL = IS_DEV
   ? (APP_CONFIG_DEV_URL ?? APP_CONFIG_PROD_URL)
   : APP_CONFIG_PROD_URL
+
+/**
+ * Bluesky Feed Consumer (bsky-stats) backend URL and API key
+ */
+export const BSKY_STATS_BASE_URL: string =
+  process.env.EXPO_PUBLIC_BSKY_STATS_BASE_URL || ''
+export const BSKY_STATS_API_KEY: string =
+  process.env.EXPO_PUBLIC_BSKY_STATS_API_KEY || ''

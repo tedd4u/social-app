@@ -29,12 +29,12 @@ import {atoms as a, useTheme, web} from '#/alf'
 import * as Layout from '#/components/Layout'
 import {Loader} from '#/components/Loader'
 import {Text} from '#/components/Typography'
+import {BSKY_STATS_API_KEY, BSKY_STATS_BASE_URL} from '#/env/common'
 
 const PFP_SIZE = 34
 
-const BACKEND_URL =
-  process.env.EXPO_PUBLIC_BSKY_STATS_BASE_URL ?? 'http://localhost:8000'
-const API_KEY = process.env.EXPO_PUBLIC_BSKY_STATS_API_KEY ?? ''
+const BACKEND_URL = BSKY_STATS_BASE_URL || 'http://localhost:8000'
+const API_KEY = BSKY_STATS_API_KEY
 
 type Props = NativeStackScreenProps<CommonNavigatorParams, 'AiChatConversation'>
 
