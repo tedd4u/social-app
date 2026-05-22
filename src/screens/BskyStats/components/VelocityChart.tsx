@@ -9,18 +9,24 @@ import {Text} from '#/components/Typography'
  * Each bar represents a velocity bucket (posts/sec).
  * No external charting library needed.
  */
+const BUCKET_INTERVAL_S = 2
+
 export function VelocityChart({
   current,
   history,
+  windowSeconds = 60,
 }: {
   current: number
   history: number[]
+  /** Selected time window in seconds — determines how many bars to show. */
+  windowSeconds?: number
 }) {
   const t = useTheme()
   const {t: lingui} = useLingui()
 
-  // Use last 60 data points (2 minutes at 2s intervals) for a compact sparkline
-  const data = history.slice(-60)
+  // Show enough data points to cover the selected window
+  const barCount = Math.floor(windowSeconds / BUCKET_INTERVAL_S)
+  const data = history.slice(-barCount)
   const max = Math.max(...data, 1)
 
   return (

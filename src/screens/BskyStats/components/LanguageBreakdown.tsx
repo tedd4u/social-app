@@ -21,13 +21,17 @@ export function LanguageBreakdown({data}: {data: Record<string, number>}) {
   const t = useTheme()
   const {t: lingui} = useLingui()
 
-  // Sort by percentage descending
-  const sorted = Object.entries(data).sort(([, a], [, b]) => b - a)
-  // Show top 8, group rest as "other"
-  const top = sorted.slice(0, 8)
-  const restSum = sorted.slice(8).reduce((sum, [, v]) => sum + v, 0)
+  // Separate the backend's "other" bucket from real languages, then
+  // show the top 8 real languages and merge everything else into "Other".
+  const backendOther = data.other ?? 0
+  const langs = Object.entries(data)
+    .filter(([k]) => k !== 'other')
+    .sort(([, a], [, b]) => b - a)
+  const top = langs.slice(0, 8)
+  const restSum =
+    langs.slice(8).reduce((sum, [, v]) => sum + v, 0) + backendOther
   if (restSum > 0) {
-    top.push(['other', restSum])
+    top.push(['Other', restSum])
   }
 
   return (

@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useState} from 'react'
-import {ScrollView, View} from 'react-native'
+import {View} from 'react-native'
 import {Trans, useLingui} from '@lingui/react/macro'
 import {useQueryClient} from '@tanstack/react-query'
 
@@ -90,10 +90,7 @@ export function BskyStatsScreen({}: Props) {
         <Layout.Header.Slot />
       </Layout.Header.Outer>
 
-      <ScrollView
-        contentContainerStyle={[a.px_lg, a.py_md, a.gap_lg]}
-        accessibilityLabel={lingui`Network statistics dashboard`}
-        accessibilityHint="">
+      <Layout.Content contentContainerStyle={[a.px_lg, a.py_md, a.gap_lg]}>
         {/* Connection indicator */}
         <View style={[a.flex_row, a.align_center, a.gap_xs]}>
           <View
@@ -172,6 +169,7 @@ export function BskyStatsScreen({}: Props) {
               <VelocityChart
                 current={snapshot.velocity.current}
                 history={snapshot.velocity.history}
+                windowSeconds={selectedWindow}
               />
             )}
 
@@ -204,7 +202,7 @@ export function BskyStatsScreen({}: Props) {
             </Text>
           </View>
         )}
-      </ScrollView>
+      </Layout.Content>
     </Layout.Screen>
   )
 }
