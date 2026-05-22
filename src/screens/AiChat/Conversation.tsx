@@ -198,7 +198,7 @@ export function AiChatConversationScreen({route}: Props) {
 
   if (loading) {
     return (
-      <Layout.Screen testID="aiChatConversationScreen">
+      <Layout.Screen minimalShell testID="aiChatConversationScreen">
         <Layout.Header.Outer>
           <View style={[a.w_full, a.flex_row, a.gap_xs, a.align_start]}>
             <View style={[{minHeight: PFP_SIZE}, a.justify_center]}>
@@ -230,6 +230,7 @@ export function AiChatConversationScreen({route}: Props) {
 
   return (
     <Layout.Screen
+      minimalShell
       testID="aiChatConversationScreen"
       style={web([{minHeight: 0}, a.flex_1])}>
       {/* Header with avatar + persona name + AI badge */}
