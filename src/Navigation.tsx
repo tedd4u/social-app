@@ -72,6 +72,8 @@ import {SupportScreen} from '#/view/screens/Support'
 import {TermsOfServiceScreen} from '#/view/screens/TermsOfService'
 import {BottomBar} from '#/view/shell/bottom-bar/BottomBar'
 import {createNativeStackNavigatorWithAuth} from '#/view/shell/createNativeStackNavigatorWithAuth'
+import {AiChatConversationScreen} from '#/screens/AiChat/Conversation'
+import {AiChatInboxScreen} from '#/screens/AiChat/Inbox'
 import {BookmarksScreen} from '#/screens/Bookmarks'
 import {BskyStatsScreen} from '#/screens/BskyStats'
 import {SharedPreferencesTesterScreen} from '#/screens/E2E/SharedPreferencesTesterScreen'
@@ -646,6 +648,22 @@ function commonScreens(Stack: typeof Flat, unreadCountLabel?: string) {
         options={{
           title: title(msg`Network Stats`),
           requireAuth: false,
+        }}
+      />
+      <Stack.Screen
+        name="AiChatInbox"
+        getComponent={() => AiChatInboxScreen}
+        options={{
+          title: title(msg`AI Chats`),
+          requireAuth: true,
+        }}
+      />
+      <Stack.Screen
+        name="AiChatConversation"
+        getComponent={() => AiChatConversationScreen}
+        options={{
+          title: title(msg`AI Chat`),
+          requireAuth: true,
         }}
       />
       <Stack.Screen

@@ -96,4 +96,6 @@ export const router = new Router<AllNavigatableRoutes>({
   Bookmarks: '/saved',
   FindContactsFlow: '/find-contacts',
   BskyStats: '/network-stats',
+  AiChatInbox: '/ai-chat',
+  AiChatConversation: '/ai-chat/:handle',
 })

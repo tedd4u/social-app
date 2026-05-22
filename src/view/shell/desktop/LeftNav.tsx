@@ -53,6 +53,7 @@ import {
 import {type Props as SVGIconProps} from '#/components/icons/common'
 import {DotGrid3x1_Stroke2_Corner0_Rounded as EllipsisIcon} from '#/components/icons/DotGrid'
 import {EditBig_Stroke2_Corner2_Rounded as EditBigIcon} from '#/components/icons/EditBig'
+import {Globe_Stroke2_Corner0_Rounded as GlobeIcon} from '#/components/icons/Globe'
 import {
   Hashtag_Filled_Corner0_Rounded as HashtagFilledIcon,
   Hashtag_Stroke2_Corner0_Rounded as HashtagIcon,
@@ -74,6 +75,7 @@ import {
   SettingsGear2_Filled_Corner0_Rounded as SettingsFilledIcon,
   SettingsGear2_Stroke2_Corner0_Rounded as SettingsIcon,
 } from '#/components/icons/SettingsGear2'
+import {Sparkle_Stroke2_Corner0_Rounded as SparkleIcon} from '#/components/icons/Sparkle'
 import {
   UserCircle_Filled_Corner0_Rounded as UserCircleFilledIcon,
   UserCircle_Stroke2_Corner0_Rounded as UserCircleIcon,
@@ -687,6 +689,24 @@ export function DesktopLeftNav({routeName}: {routeName: string}) {
             icons={{
               inactive: MessageIcon,
               active: MessageFilledIcon,
+            }}
+          />
+          <NavItem
+            label={l`AI Chat`}
+            href="/ai-chat"
+            minimal={leftNavMinimal}
+            icons={{
+              inactive: SparkleIcon,
+              active: SparkleIcon,
+            }}
+          />
+          <NavItem
+            label={l`Network Stats`}
+            href="/network-stats"
+            minimal={leftNavMinimal}
+            icons={{
+              inactive: GlobeIcon,
+              active: GlobeIcon,
             }}
           />
           <NavItem

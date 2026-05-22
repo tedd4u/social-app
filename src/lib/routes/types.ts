@@ -92,6 +92,8 @@ export type CommonNavigatorParams = {
   Bookmarks: undefined
   FindContactsFlow: undefined
   BskyStats: undefined
+  AiChatInbox: undefined
+  AiChatConversation: {handle: string}
 }
 
 export type BottomTabNavigatorParams = CommonNavigatorParams & {

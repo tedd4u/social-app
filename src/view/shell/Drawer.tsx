@@ -31,6 +31,7 @@ import {
 } from '#/components/icons/Bell'
 import {Bookmark, BookmarkFilled} from '#/components/icons/Bookmark'
 import {BulletList_Stroke2_Corner0_Rounded as List} from '#/components/icons/BulletList'
+import {Globe_Stroke2_Corner0_Rounded as Globe} from '#/components/icons/Globe'
 import {
   Hashtag_Filled_Corner0_Rounded as HashtagFilled,
   Hashtag_Stroke2_Corner0_Rounded as Hashtag,
@@ -48,6 +49,7 @@ import {
   Message_Stroke2_Corner0_Rounded_Filled as MessageFilled,
 } from '#/components/icons/Message'
 import {SettingsGear2_Stroke2_Corner0_Rounded as Settings} from '#/components/icons/SettingsGear2'
+import {Sparkle_Stroke2_Corner0_Rounded as Sparkle} from '#/components/icons/Sparkle'
 import {
   UserCircle_Filled_Corner0_Rounded as UserCircleFilled,
   UserCircle_Stroke2_Corner0_Rounded as UserCircle,
@@ -216,6 +218,16 @@ let DrawerContent = ({}: React.PropsWithoutRef<{}>): React.ReactNode => {
     setDrawerOpen(false)
   }, [navigation, setDrawerOpen])
 
+  const onPressAiChat = useCallback(() => {
+    navigation.navigate('AiChatInbox')
+    setDrawerOpen(false)
+  }, [navigation, setDrawerOpen])
+
+  const onPressNetworkStats = useCallback(() => {
+    navigation.navigate('BskyStats')
+    setDrawerOpen(false)
+  }, [navigation, setDrawerOpen])
+
   const onPressLists = useCallback(() => {
     navigation.navigate('Lists')
     setDrawerOpen(false)
@@ -281,10 +293,12 @@ let DrawerContent = ({}: React.PropsWithoutRef<{}>): React.ReactNode => {
             <SearchMenuItem isActive={isAtSearch} onPress={onPressSearch} />
             <HomeMenuItem isActive={isAtHome} onPress={onPressHome} />
             <ChatMenuItem isActive={isAtMessages} onPress={onPressMessages} />
+            <AiChatMenuItem onPress={onPressAiChat} />
             <NotificationsMenuItem
               isActive={isAtNotifications}
               onPress={onPressNotifications}
             />
+            <NetworkStatsMenuItem onPress={onPressNetworkStats} />
             <FeedsMenuItem isActive={isAtFeeds} onPress={onPressMyFeeds} />
             <ListsMenuItem onPress={onPressLists} />
             <BookmarksMenuItem
@@ -458,6 +472,36 @@ let ChatMenuItem = ({
   )
 }
 ChatMenuItem = memo(ChatMenuItem)
+
+let AiChatMenuItem = ({onPress}: {onPress: () => void}): React.ReactNode => {
+  const {_} = useLingui()
+  const t = useTheme()
+  return (
+    <MenuItem
+      icon={<Sparkle style={[t.atoms.text]} width={iconWidth} />}
+      label={_(msg`AI Chat`)}
+      onPress={onPress}
+    />
+  )
+}
+AiChatMenuItem = memo(AiChatMenuItem)
+
+let NetworkStatsMenuItem = ({
+  onPress,
+}: {
+  onPress: () => void
+}): React.ReactNode => {
+  const {_} = useLingui()
+  const t = useTheme()
+  return (
+    <MenuItem
+      icon={<Globe style={[t.atoms.text]} width={iconWidth} />}
+      label={_(msg`Network Stats`)}
+      onPress={onPress}
+    />
+  )
+}
+NetworkStatsMenuItem = memo(NetworkStatsMenuItem)
 
 let NotificationsMenuItem = ({
   isActive,
