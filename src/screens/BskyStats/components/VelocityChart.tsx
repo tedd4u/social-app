@@ -27,7 +27,12 @@ export function VelocityChart({
   // Show enough data points to cover the selected window
   const barCount = Math.floor(windowSeconds / BUCKET_INTERVAL_S)
   const data = history.slice(-barCount)
-  const max = Math.max(...data, 1)
+  // Use the 99th-percentile value as the chart ceiling so that a single
+  // outlier spike (e.g. reconnection backlog flush) doesn't compress
+  // all the normal bars into invisible slivers.
+  const sorted = [...data].sort((x, y) => x - y)
+  const p99 = sorted[Math.floor(sorted.length * 0.99)] ?? 1
+  const max = Math.max(p99, 1)
 
   return (
     <View
@@ -55,7 +60,7 @@ export function VelocityChart({
             key={i}
             style={{
               flex: 1,
-              height: Math.max((val / max) * 48, 1),
+              height: Math.min(Math.max((val / max) * 48, 1), 48),
               backgroundColor: t.atoms.text_contrast_low.color,
               borderRadius: 1,
               opacity: 0.6 + 0.4 * (i / data.length),
