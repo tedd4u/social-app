@@ -90,7 +90,7 @@ export function BskyStatsScreen({}: Props) {
         <Layout.Header.Slot />
       </Layout.Header.Outer>
 
-      <Layout.Content contentContainerStyle={[a.px_lg, a.py_md, a.gap_lg]}>
+      <Layout.Content contentContainerStyle={[a.px_lg, a.py_md, a.gap_xl]}>
         {/* Connection indicator */}
         <View style={[a.flex_row, a.align_center, a.gap_xs]}>
           <View
