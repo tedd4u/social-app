@@ -73,6 +73,7 @@ import {TermsOfServiceScreen} from '#/view/screens/TermsOfService'
 import {BottomBar} from '#/view/shell/bottom-bar/BottomBar'
 import {createNativeStackNavigatorWithAuth} from '#/view/shell/createNativeStackNavigatorWithAuth'
 import {BookmarksScreen} from '#/screens/Bookmarks'
+import {BskyStatsScreen} from '#/screens/BskyStats'
 import {SharedPreferencesTesterScreen} from '#/screens/E2E/SharedPreferencesTesterScreen'
 import {FindContactsFlowScreen} from '#/screens/FindContactsFlowScreen'
 import HashtagScreen from '#/screens/Hashtag'
@@ -637,6 +638,14 @@ function commonScreens(Stack: typeof Flat, unreadCountLabel?: string) {
         options={{
           title: title(msg`Saved Posts`),
           requireAuth: true,
+        }}
+      />
+      <Stack.Screen
+        name="BskyStats"
+        getComponent={() => BskyStatsScreen}
+        options={{
+          title: title(msg`Network Stats`),
+          requireAuth: false,
         }}
       />
       <Stack.Screen

@@ -51,7 +51,9 @@ export function parseSSEChunk(buffer: string): {
   let currentEvent = ''
   let currentData = ''
 
-  for (const line of lines) {
+  for (const rawLine of lines) {
+    // Strip \r for servers that send \r\n line endings
+    const line = rawLine.replace(/\r$/, '')
     if (line.startsWith('event: ')) {
       currentEvent = line.slice(7).trim()
     } else if (line.startsWith('data: ')) {

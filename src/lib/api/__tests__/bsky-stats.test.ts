@@ -384,6 +384,15 @@ describe('SSE event parsing', () => {
     // Caller is responsible for JSON.parse — this tests the parser layer
     expect(() => JSON.parse(events[0].data)).toThrow()
   })
+
+  it('handles \\r\\n (CRLF) line endings from servers', () => {
+    const input = 'event: snapshot\r\ndata: {"ts":"now"}\r\n\r\n'
+    const {events, remainder} = parseSSEChunk(input)
+    expect(events).toHaveLength(1)
+    expect(events[0].event).toBe('snapshot')
+    expect(events[0].data).toBe('{"ts":"now"}')
+    expect(remainder).toBe('')
+  })
 })
 
 // ---------------------------------------------------------------------------
