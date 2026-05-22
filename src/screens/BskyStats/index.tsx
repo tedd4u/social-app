@@ -90,118 +90,121 @@ export function BskyStatsScreen({}: Props) {
         <Layout.Header.Slot />
       </Layout.Header.Outer>
 
-      <Layout.Content contentContainerStyle={[a.px_lg, a.py_md, a.gap_xl]}>
-        {/* Connection indicator */}
-        <View style={[a.flex_row, a.align_center, a.gap_xs]}>
-          <View
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: 4,
-              backgroundColor: connected
-                ? '#22c55e'
-                : t.atoms.text_contrast_low.color,
-            }}
-            accessibilityLabel={
-              connected
-                ? lingui`Connected to live stream`
-                : lingui`Connecting to live stream`
-            }
-            accessibilityHint=""
-          />
-          <Text style={[a.text_xs, t.atoms.text_contrast_medium]}>
-            {connected ? <Trans>Live</Trans> : <Trans>Connecting...</Trans>}
-          </Text>
-          {connected && snapshot && (
-            <Text style={[a.text_xs, t.atoms.text_contrast_low]}>
-              {new Date(snapshot.timestamp).toLocaleTimeString()}
+      <Layout.Content>
+        <View style={[a.px_lg, a.py_md, a.gap_xl]}>
+          {/* Connection indicator */}
+          <View style={[a.flex_row, a.align_center, a.gap_xs]}>
+            <View
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: 4,
+                backgroundColor: connected
+                  ? '#22c55e'
+                  : t.atoms.text_contrast_low.color,
+              }}
+              accessibilityLabel={
+                connected
+                  ? lingui`Connected to live stream`
+                  : lingui`Connecting to live stream`
+              }
+              accessibilityHint=""
+            />
+            <Text style={[a.text_xs, t.atoms.text_contrast_medium]}>
+              {connected ? <Trans>Live</Trans> : <Trans>Connecting...</Trans>}
             </Text>
-          )}
-        </View>
-
-        {/* Window selector */}
-        <WindowTabs
-          windows={availableWindows}
-          selected={selectedWindow}
-          onSelect={handleWindowChange}
-        />
-
-        {!connected ? (
-          <View style={[a.flex_1, a.align_center, a.justify_center, a.py_5xl]}>
-            <Loader size="xl" />
-            <Text style={[a.mt_md, t.atoms.text_contrast_medium]}>
-              <Trans>Connecting to firehose...</Trans>
-            </Text>
-          </View>
-        ) : windowStats ? (
-          <>
-            {/* Metric cards */}
-            <View style={[a.flex_row, a.flex_wrap, a.gap_sm]}>
-              <StatCard
-                label={lingui`Posts`}
-                value={windowStats.metrics.post_count}
-                delta={windowStats.deltas?.post_count}
-              />
-              <StatCard
-                label={lingui`Unique Posters`}
-                value={windowStats.metrics.user_count}
-                delta={windowStats.deltas?.user_count}
-              />
-              <StatCard
-                label={lingui`Likes`}
-                value={windowStats.metrics.like_count}
-                delta={windowStats.deltas?.like_count}
-              />
-              <StatCard
-                label={lingui`Reposts`}
-                value={windowStats.metrics.repost_count}
-                delta={windowStats.deltas?.repost_count}
-              />
-              <StatCard
-                label={lingui`Replies`}
-                value={windowStats.metrics.reply_count}
-                delta={windowStats.deltas?.reply_count}
-              />
-            </View>
-
-            {/* Velocity sparkline */}
-            {snapshot?.velocity && (
-              <VelocityChart
-                current={snapshot.velocity.current}
-                history={snapshot.velocity.history}
-                windowSeconds={selectedWindow}
-              />
+            {connected && snapshot && (
+              <Text style={[a.text_xs, t.atoms.text_contrast_low]}>
+                {new Date(snapshot.timestamp).toLocaleTimeString()}
+              </Text>
             )}
+          </View>
 
-            {/* Language breakdown */}
-            {windowStats.language_breakdown &&
-              Object.keys(windowStats.language_breakdown).length > 0 && (
-                <LanguageBreakdown data={windowStats.language_breakdown} />
+          {/* Window selector */}
+          <WindowTabs
+            windows={availableWindows}
+            selected={selectedWindow}
+            onSelect={handleWindowChange}
+          />
+
+          {!connected ? (
+            <View
+              style={[a.flex_1, a.align_center, a.justify_center, a.py_5xl]}>
+              <Loader size="xl" />
+              <Text style={[a.mt_md, t.atoms.text_contrast_medium]}>
+                <Trans>Connecting to firehose...</Trans>
+              </Text>
+            </View>
+          ) : windowStats ? (
+            <>
+              {/* Metric cards */}
+              <View style={[a.flex_row, a.flex_wrap, a.gap_sm]}>
+                <StatCard
+                  label={lingui`Posts`}
+                  value={windowStats.metrics.post_count}
+                  delta={windowStats.deltas?.post_count}
+                />
+                <StatCard
+                  label={lingui`Unique Posters`}
+                  value={windowStats.metrics.user_count}
+                  delta={windowStats.deltas?.user_count}
+                />
+                <StatCard
+                  label={lingui`Likes`}
+                  value={windowStats.metrics.like_count}
+                  delta={windowStats.deltas?.like_count}
+                />
+                <StatCard
+                  label={lingui`Reposts`}
+                  value={windowStats.metrics.repost_count}
+                  delta={windowStats.deltas?.repost_count}
+                />
+                <StatCard
+                  label={lingui`Replies`}
+                  value={windowStats.metrics.reply_count}
+                  delta={windowStats.deltas?.reply_count}
+                />
+              </View>
+
+              {/* Velocity sparkline */}
+              {snapshot?.velocity && (
+                <VelocityChart
+                  current={snapshot.velocity.current}
+                  history={snapshot.velocity.history}
+                  windowSeconds={selectedWindow}
+                />
               )}
 
-            {/* Top lists */}
-            {windowStats.top_liked.length > 0 && (
-              <TopList
-                title={lingui`Most Liked`}
-                items={windowStats.top_liked}
-                countLabel={lingui`likes`}
-              />
-            )}
-            {windowStats.top_reposted.length > 0 && (
-              <TopList
-                title={lingui`Most Reposted`}
-                items={windowStats.top_reposted}
-                countLabel={lingui`reposts`}
-              />
-            )}
-          </>
-        ) : (
-          <View style={[a.py_2xl, a.align_center]}>
-            <Text style={[t.atoms.text_contrast_medium]}>
-              <Trans>No data for this window yet</Trans>
-            </Text>
-          </View>
-        )}
+              {/* Language breakdown */}
+              {windowStats.language_breakdown &&
+                Object.keys(windowStats.language_breakdown).length > 0 && (
+                  <LanguageBreakdown data={windowStats.language_breakdown} />
+                )}
+
+              {/* Top lists */}
+              {windowStats.top_liked.length > 0 && (
+                <TopList
+                  title={lingui`Most Liked`}
+                  items={windowStats.top_liked}
+                  countLabel={lingui`likes`}
+                />
+              )}
+              {windowStats.top_reposted.length > 0 && (
+                <TopList
+                  title={lingui`Most Reposted`}
+                  items={windowStats.top_reposted}
+                  countLabel={lingui`reposts`}
+                />
+              )}
+            </>
+          ) : (
+            <View style={[a.py_2xl, a.align_center]}>
+              <Text style={[t.atoms.text_contrast_medium]}>
+                <Trans>No data for this window yet</Trans>
+              </Text>
+            </View>
+          )}
+        </View>
       </Layout.Content>
     </Layout.Screen>
   )
