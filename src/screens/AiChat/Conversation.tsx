@@ -261,19 +261,6 @@ export function AiChatConversationScreen({route}: Props) {
                 </View>
               </View>
             </View>
-            {persona && (
-              <Text
-                style={[
-                  a.text_xs,
-                  t.atoms.text_contrast_low,
-                  {marginLeft: PFP_SIZE + 16},
-                ]}
-                numberOfLines={1}>
-                {persona.status === 'loading'
-                  ? `Loading posts... (${persona.post_count} so far)`
-                  : `${persona.post_count} posts loaded`}
-              </Text>
-            )}
           </View>
           <View style={[{minHeight: PFP_SIZE}, a.justify_center]}>
             <Layout.Header.Slot />
