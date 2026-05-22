@@ -153,9 +153,28 @@ export const APP_CONFIG_URL = IS_DEV
   : APP_CONFIG_PROD_URL
 
 /**
- * Bluesky Feed Consumer (bsky-stats) backend URL and API key
+ * Bluesky Feed Consumer (bsky-stats) backend URL and API key.
+ *
+ * We read from both Expo's built-in process.env inlining AND the
+ * react-native-dotenv @env module.  Expo inlines EXPO_PUBLIC_* on web
+ * but can silently miss them on native iOS depending on SDK/Metro
+ * version, so the @env fallback guarantees the values reach the bundle.
  */
+
+const _dotenv: Record<string, string | undefined> = (() => {
+  try {
+    // react-native-dotenv babel plugin replaces this at build time
+    return require('@env')
+  } catch {
+    return {}
+  }
+})()
+
 export const BSKY_STATS_BASE_URL: string =
-  process.env.EXPO_PUBLIC_BSKY_STATS_BASE_URL || ''
+  process.env.EXPO_PUBLIC_BSKY_STATS_BASE_URL ||
+  _dotenv.EXPO_PUBLIC_BSKY_STATS_BASE_URL ||
+  ''
 export const BSKY_STATS_API_KEY: string =
-  process.env.EXPO_PUBLIC_BSKY_STATS_API_KEY || ''
+  process.env.EXPO_PUBLIC_BSKY_STATS_API_KEY ||
+  _dotenv.EXPO_PUBLIC_BSKY_STATS_API_KEY ||
+  ''
