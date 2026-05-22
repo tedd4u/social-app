@@ -83,6 +83,26 @@ export function AiChatConversationScreen({route}: Props) {
     }
   }, [handle])
 
+  // Poll persona status while it's still loading posts
+  useEffect(() => {
+    if (!persona || persona.status !== 'loading') return
+
+    const interval = setInterval(() => {
+      void (async () => {
+        try {
+          const status = await fetchPersonaStatus(handle)
+          setPersona(status)
+        } catch {
+          // Ignore transient poll errors
+        }
+      })()
+    }, 1500)
+
+    return () => clearInterval(interval)
+  }, [handle, persona?.status])
+
+  const personaReady = persona?.status === 'ready'
+
   // Scroll to bottom when messages change
   useEffect(() => {
     if (messages.length > 0 || streaming) {
@@ -197,7 +217,9 @@ export function AiChatConversationScreen({route}: Props) {
           <Layout.Header.TitleText>AI {displayName}</Layout.Header.TitleText>
           {persona && (
             <Text style={[a.text_xs, t.atoms.text_contrast_low]}>
-              {persona.post_count} posts loaded
+              {persona.status === 'loading'
+                ? `Loading posts... (${persona.post_count} so far)`
+                : `${persona.post_count} posts loaded`}
             </Text>
           )}
         </Layout.Header.Content>
@@ -214,134 +236,180 @@ export function AiChatConversationScreen({route}: Props) {
           contentContainerStyle={[a.px_md, a.py_md, a.gap_sm]}
           renderItem={({item}) => <MessageBubble item={item} />}
           ListEmptyComponent={
-            <View style={[a.py_5xl, a.align_center]}>
-              <Text style={[a.text_md, t.atoms.text_contrast_medium]}>
-                <Trans>Start a conversation with AI {displayName}</Trans>
-              </Text>
-            </View>
+            !personaReady ? (
+              <View style={[a.py_5xl, a.align_center, a.gap_md]}>
+                <Loader size="xl" />
+                <Text style={[a.text_md, t.atoms.text_contrast_medium]}>
+                  <Trans>Building persona profile...</Trans>
+                </Text>
+                <Text style={[a.text_sm, t.atoms.text_contrast_low]}>
+                  {persona?.post_count ?? 0} posts fetched
+                </Text>
+              </View>
+            ) : (
+              <View style={[a.py_5xl, a.align_center]}>
+                <Text style={[a.text_md, t.atoms.text_contrast_medium]}>
+                  <Trans>Start a conversation with AI {displayName}</Trans>
+                </Text>
+              </View>
+            )
           }
           onContentSizeChange={() => {
             flatListRef.current?.scrollToEnd({animated: false})
           }}
         />
 
-        {/* Debug info bar */}
-        <View
-          style={[
-            a.px_md,
-            {
-              paddingVertical: 4,
-              borderTopWidth: 1,
-              borderTopColor: t.atoms.border_contrast_low.borderColor,
-              backgroundColor: t.atoms.bg.backgroundColor,
-            },
-          ]}>
-          <Text style={[{fontSize: 10}, t.atoms.text_contrast_low]}>
-            Corpus: {persona?.post_count ?? '?'} posts
-            {persona?.last_corpus_update &&
-              ` | Updated: ${formatTimeSince(persona.last_corpus_update)}`}
-            {contextPostsUsed != null &&
-              ` | Context: ${contextPostsUsed} posts selected`}
-          </Text>
-        </View>
-
-        {/* Error banner */}
-        {error && (
-          <View
-            style={[
-              a.px_md,
-              a.py_xs,
-              {
-                backgroundColor: '#fef2f2',
-                borderTopWidth: 1,
-                borderTopColor: '#fecaca',
-              },
-            ]}>
-            <Text style={[a.text_xs, {color: '#dc2626'}]}>{error}</Text>
-          </View>
-        )}
-
-        {/* Input area */}
-        <View
-          style={[
-            a.flex_row,
-            a.align_center,
-            a.gap_sm,
-            a.px_md,
-            a.py_sm,
-            {
-              borderTopWidth: 1,
-              borderTopColor: t.atoms.border_contrast_low.borderColor,
-              backgroundColor: t.atoms.bg.backgroundColor,
-            },
-          ]}>
-          <TextInput
-            style={[
-              a.flex_1,
-              a.text_md,
-              a.rounded_full,
-              t.atoms.text,
-              {
-                backgroundColor: t.atoms.bg_contrast_25.backgroundColor,
-                borderWidth: 1,
-                borderColor: t.atoms.border_contrast_low.borderColor,
-                paddingHorizontal: 16,
-                paddingVertical: 10,
-              },
-            ]}
-            value={inputText}
-            onChangeText={setInputText}
-            onSubmitEditing={handleSubmitEditing}
-            placeholder={lingui`Message AI ${displayName}...`}
-            placeholderTextColor={t.atoms.text_contrast_low.color}
-            returnKeyType="send"
-            editable={!streaming}
-            multiline={false}
-            accessibilityLabel={lingui`Message input`}
-            accessibilityHint={lingui`Type a message to send to AI ${displayName}`}
-          />
-          <Pressable
-            onPress={handleSend}
-            disabled={!inputText.trim() || streaming}
-            style={[
-              a.align_center,
-              a.justify_center,
-              {
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                backgroundColor:
-                  inputText.trim() && !streaming ? '#0085ff' : '#94a3b8',
-              },
-            ]}
-            accessibilityLabel={lingui`Send message`}
-            accessibilityHint={lingui`Sends your message`}
-            accessibilityRole="button">
-            <Text style={[{color: '#fff', fontSize: 16, fontWeight: '700'}]}>
-              {'↑'}
-            </Text>
-          </Pressable>
-        </View>
-
-        {/* Clear chat button */}
-        {messages.length > 0 && !streaming && (
-          <View
-            style={[
-              a.px_md,
-              a.pb_sm,
-              {backgroundColor: t.atoms.bg.backgroundColor},
-            ]}>
-            <Pressable
-              onPress={handleClearChat}
-              style={[a.py_xs, a.align_center]}
-              accessibilityLabel={lingui`Clear conversation`}
-              accessibilityHint={lingui`Deletes all messages in this conversation`}
-              accessibilityRole="button">
-              <Text style={[a.text_xs, t.atoms.text_contrast_low]}>
-                <Trans>Clear conversation</Trans>
+        {/* Bottom area: only show input when persona is ready */}
+        {personaReady ? (
+          <>
+            {/* Debug info bar */}
+            <View
+              style={[
+                a.px_md,
+                {
+                  paddingVertical: 4,
+                  borderTopWidth: 1,
+                  borderTopColor: t.atoms.border_contrast_low.borderColor,
+                  backgroundColor: t.atoms.bg.backgroundColor,
+                },
+              ]}>
+              <Text style={[{fontSize: 10}, t.atoms.text_contrast_low]}>
+                Corpus: {persona?.post_count ?? '?'} posts
+                {persona?.last_corpus_update &&
+                  ` | Updated: ${formatTimeSince(persona.last_corpus_update)}`}
+                {contextPostsUsed != null &&
+                  ` | Context: ${contextPostsUsed} posts selected`}
               </Text>
-            </Pressable>
-          </View>
+            </View>
+
+            {/* Error banner */}
+            {error && (
+              <View
+                style={[
+                  a.px_md,
+                  a.py_xs,
+                  {
+                    backgroundColor: '#fef2f2',
+                    borderTopWidth: 1,
+                    borderTopColor: '#fecaca',
+                  },
+                ]}>
+                <Text style={[a.text_xs, {color: '#dc2626'}]}>{error}</Text>
+              </View>
+            )}
+
+            {/* Input area */}
+            <View
+              style={[
+                a.flex_row,
+                a.align_center,
+                a.gap_sm,
+                {
+                  padding: a.p_sm.padding,
+                  borderTopWidth: 1,
+                  borderTopColor: t.atoms.border_contrast_low.borderColor,
+                  backgroundColor: t.atoms.bg.backgroundColor,
+                },
+              ]}>
+              <View
+                style={[
+                  a.flex_row,
+                  a.flex_1,
+                  a.align_center,
+                  t.atoms.bg_contrast_25,
+                  {
+                    borderWidth: 1,
+                    borderColor: 'transparent',
+                    borderRadius: 23,
+                    paddingHorizontal: a.p_sm.padding - 2,
+                  },
+                ]}>
+                <TextInput
+                  style={[
+                    a.flex_1,
+                    a.text_md,
+                    t.atoms.text,
+                    {
+                      backgroundColor: 'transparent',
+                      paddingHorizontal: 12,
+                      paddingVertical: 10,
+                    },
+                  ]}
+                  value={inputText}
+                  onChangeText={setInputText}
+                  onSubmitEditing={handleSubmitEditing}
+                  placeholder={lingui`Message AI ${displayName}...`}
+                  placeholderTextColor={t.atoms.text_contrast_low.color}
+                  returnKeyType="send"
+                  editable={!streaming}
+                  multiline={false}
+                  accessibilityLabel={lingui`Message input`}
+                  accessibilityHint={lingui`Type a message to send to AI ${displayName}`}
+                />
+              </View>
+              <Pressable
+                onPress={handleSend}
+                disabled={!inputText.trim() || streaming}
+                style={[
+                  a.align_center,
+                  a.justify_center,
+                  {
+                    width: 36,
+                    height: 36,
+                    borderRadius: 18,
+                    backgroundColor:
+                      inputText.trim() && !streaming ? '#0085ff' : '#94a3b8',
+                  },
+                ]}
+                accessibilityLabel={lingui`Send message`}
+                accessibilityHint={lingui`Sends your message`}
+                accessibilityRole="button">
+                <Text
+                  style={[{color: '#fff', fontSize: 16, fontWeight: '700'}]}>
+                  {'↑'}
+                </Text>
+              </Pressable>
+            </View>
+
+            {/* Clear chat button */}
+            {messages.length > 0 && !streaming && (
+              <View
+                style={[
+                  a.px_md,
+                  a.pb_sm,
+                  {backgroundColor: t.atoms.bg.backgroundColor},
+                ]}>
+                <Pressable
+                  onPress={handleClearChat}
+                  style={[a.py_xs, a.align_center]}
+                  accessibilityLabel={lingui`Clear conversation`}
+                  accessibilityHint={lingui`Deletes all messages in this conversation`}
+                  accessibilityRole="button">
+                  <Text style={[a.text_xs, t.atoms.text_contrast_low]}>
+                    <Trans>Clear conversation</Trans>
+                  </Text>
+                </Pressable>
+              </View>
+            )}
+          </>
+        ) : (
+          persona?.status === 'error' && (
+            <View
+              style={[
+                a.px_md,
+                a.py_sm,
+                a.align_center,
+                {
+                  borderTopWidth: 1,
+                  borderTopColor: t.atoms.border_contrast_low.borderColor,
+                  backgroundColor: t.atoms.bg.backgroundColor,
+                },
+              ]}>
+              <Text style={[a.text_sm, {color: '#dc2626'}]}>
+                <Trans>Failed to build persona profile</Trans>
+              </Text>
+            </View>
+          )
         )}
       </Layout.Center>
     </Layout.Screen>
