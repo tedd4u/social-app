@@ -15,7 +15,7 @@ import {
 import {useStatsStream} from '#/state/queries/bsky-stats'
 import {LanguageBreakdown} from '#/screens/BskyStats/components/LanguageBreakdown'
 import {StatCard} from '#/screens/BskyStats/components/StatCard'
-import {TopList} from '#/screens/BskyStats/components/TopList'
+import {TopPosts} from '#/screens/BskyStats/components/TopPosts'
 import {VelocityChart} from '#/screens/BskyStats/components/VelocityChart'
 import {WindowTabs} from '#/screens/BskyStats/components/WindowTabs'
 import {atoms as a, useTheme} from '#/alf'
@@ -181,21 +181,11 @@ export function BskyStatsScreen({}: Props) {
                   <LanguageBreakdown data={windowStats.language_breakdown} />
                 )}
 
-              {/* Top lists */}
-              {windowStats.top_liked.length > 0 && (
-                <TopList
-                  title={lingui`Most Liked`}
-                  items={windowStats.top_liked}
-                  countLabel={lingui`likes`}
-                />
-              )}
-              {windowStats.top_reposted.length > 0 && (
-                <TopList
-                  title={lingui`Most Reposted`}
-                  items={windowStats.top_reposted}
-                  countLabel={lingui`reposts`}
-                />
-              )}
+              {/* Top posts with segment control */}
+              <TopPosts
+                topLiked={windowStats.top_liked}
+                topReposted={windowStats.top_reposted}
+              />
             </>
           ) : (
             <View style={[a.py_2xl, a.align_center]}>
