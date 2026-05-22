@@ -13,6 +13,7 @@ import {
   type NativeStackScreenProps,
   type NavigationProp,
 } from '#/lib/routes/types'
+import {UserAvatar} from '#/view/com/util/UserAvatar'
 import {atoms as a, useTheme} from '#/alf'
 import * as Layout from '#/components/Layout'
 import {Loader} from '#/components/Loader'
@@ -152,22 +153,8 @@ function PersonaRow({
       accessibilityLabel={lingui`Chat with AI ${persona.display_name ?? persona.handle}`}
       accessibilityHint={lingui`Opens AI chat conversation`}
       accessibilityRole="button">
-      {/* Avatar placeholder */}
-      <View
-        style={[
-          {
-            width: 48,
-            height: 48,
-            borderRadius: 24,
-            backgroundColor: t.atoms.bg_contrast_100.backgroundColor,
-          },
-          a.align_center,
-          a.justify_center,
-        ]}>
-        <Text style={[a.text_lg]}>
-          {(persona.display_name ?? persona.handle).charAt(0).toUpperCase()}
-        </Text>
-      </View>
+      {/* Avatar */}
+      <UserAvatar type="user" size={48} avatar={persona.avatar_url} />
 
       {/* Info */}
       <View style={[a.flex_1]}>
