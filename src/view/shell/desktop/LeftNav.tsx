@@ -74,6 +74,7 @@ import {
   SettingsGear2_Filled_Corner0_Rounded as SettingsFilledIcon,
   SettingsGear2_Stroke2_Corner0_Rounded as SettingsIcon,
 } from '#/components/icons/SettingsGear2'
+import {Sparkle_Stroke2_Corner0_Rounded as SparkleIcon} from '#/components/icons/Sparkle'
 import {
   UserCircle_Filled_Corner0_Rounded as UserCircleFilledIcon,
   UserCircle_Stroke2_Corner0_Rounded as UserCircleIcon,
@@ -687,6 +688,15 @@ export function DesktopLeftNav({routeName}: {routeName: string}) {
             icons={{
               inactive: MessageIcon,
               active: MessageFilledIcon,
+            }}
+          />
+          <NavItem
+            label={l`AI Chat`}
+            href="/ai-chat"
+            minimal={leftNavMinimal}
+            icons={{
+              inactive: SparkleIcon,
+              active: SparkleIcon,
             }}
           />
           <NavItem

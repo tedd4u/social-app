@@ -43,6 +43,7 @@ import {
   PersonX_Stroke2_Corner0_Rounded as PersonX,
 } from '#/components/icons/Person'
 import {PlusLarge_Stroke2_Corner0_Rounded as Plus} from '#/components/icons/Plus'
+import {Sparkle_Stroke2_Corner0_Rounded as Sparkle} from '#/components/icons/Sparkle'
 import {SpeakerVolumeFull_Stroke2_Corner0_Rounded as Unmute} from '#/components/icons/Speaker'
 import {StarterPack} from '#/components/icons/StarterPack'
 import * as Menu from '#/components/Menu'
@@ -241,6 +242,20 @@ let ProfileMenu = ({
     navigation.navigate('ProfileSearch', {name: profile.handle})
   }, [navigation, profile.handle])
 
+  const onPressAiChat = useCallback(async () => {
+    // Fire-and-forget: register the persona if not already registered.
+    // The backend handles idempotency — duplicate POSTs are harmless.
+    try {
+      const {createPersona} = await import('#/lib/api/bsky-stats')
+      createPersona(profile.handle).catch(() => {
+        // Best-effort — if the persona already exists, this is fine
+      })
+    } catch {
+      // Import or call failed — proceed to chat screen anyway
+    }
+    navigation.navigate('AiChatConversation', {handle: profile.handle})
+  }, [navigation, profile.handle])
+
   const verificationCreatePromptControl = Prompt.usePromptControl()
   const verificationRemovePromptControl = Prompt.usePromptControl()
   const currentAccountVerifications =
@@ -359,6 +374,21 @@ let ProfileMenu = ({
                   </Menu.ItemText>
                   <Menu.ItemIcon icon={List} />
                 </Menu.Item>
+                {!isSelf && (
+                  <Menu.Item
+                    testID="profileHeaderDropdownAiChatBtn"
+                    label={_(
+                      msg`Chat with AI ${profile.displayName || profile.handle}`,
+                    )}
+                    onPress={onPressAiChat}>
+                    <Menu.ItemText>
+                      <Trans>
+                        Chat with AI {profile.displayName || profile.handle}
+                      </Trans>
+                    </Menu.ItemText>
+                    <Menu.ItemIcon icon={Sparkle} />
+                  </Menu.Item>
+                )}
                 {isSelf && canGoLive && (
                   <Menu.Item
                     testID="profileHeaderDropdownListAddRemoveBtn"
