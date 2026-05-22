@@ -24,10 +24,13 @@ import {
   type NativeStackScreenProps,
   type NavigationProp,
 } from '#/lib/routes/types'
+import {UserAvatar} from '#/view/com/util/UserAvatar'
 import {atoms as a, useTheme, web} from '#/alf'
 import * as Layout from '#/components/Layout'
 import {Loader} from '#/components/Loader'
 import {Text} from '#/components/Typography'
+
+const PFP_SIZE = 34
 
 const BACKEND_URL =
   process.env.EXPO_PUBLIC_BSKY_STATS_BASE_URL ?? 'http://localhost:8000'
@@ -191,13 +194,26 @@ export function AiChatConversationScreen({route}: Props) {
     return (
       <Layout.Screen testID="aiChatConversationScreen">
         <Layout.Header.Outer>
-          <Layout.Header.BackButton />
-          <Layout.Header.Content>
-            <Layout.Header.TitleText>
-              <Trans>AI Chat</Trans>
-            </Layout.Header.TitleText>
-          </Layout.Header.Content>
-          <Layout.Header.Slot />
+          <View style={[a.w_full, a.flex_row, a.gap_xs, a.align_start]}>
+            <View style={[{minHeight: PFP_SIZE}, a.justify_center]}>
+              <Layout.Header.BackButton />
+            </View>
+            <View style={[a.flex_row, a.align_center, a.gap_md, a.flex_1]}>
+              <View
+                style={[
+                  {width: PFP_SIZE, height: PFP_SIZE},
+                  a.rounded_full,
+                  t.atoms.bg_contrast_25,
+                ]}
+              />
+              <Text
+                style={[a.text_md, a.font_semi_bold, t.atoms.text]}
+                numberOfLines={1}>
+                <Trans>AI Chat</Trans>
+              </Text>
+            </View>
+            <Layout.Header.Slot />
+          </View>
         </Layout.Header.Outer>
         <View style={[a.flex_1, a.align_center, a.justify_center]}>
           <Loader size="xl" />
@@ -210,20 +226,59 @@ export function AiChatConversationScreen({route}: Props) {
     <Layout.Screen
       testID="aiChatConversationScreen"
       style={web([{minHeight: 0}, a.flex_1])}>
-      {/* Header with persona name */}
+      {/* Header with avatar + persona name + AI badge */}
       <Layout.Header.Outer>
-        <Layout.Header.BackButton />
-        <Layout.Header.Content>
-          <Layout.Header.TitleText>AI {displayName}</Layout.Header.TitleText>
-          {persona && (
-            <Text style={[a.text_xs, t.atoms.text_contrast_low]}>
-              {persona.status === 'loading'
-                ? `Loading posts... (${persona.post_count} so far)`
-                : `${persona.post_count} posts loaded`}
-            </Text>
-          )}
-        </Layout.Header.Content>
-        <Layout.Header.Slot />
+        <View style={[a.w_full, a.flex_row, a.gap_xs, a.align_start]}>
+          <View style={[{minHeight: PFP_SIZE}, a.justify_center]}>
+            <Layout.Header.BackButton />
+          </View>
+          <View style={[a.flex_1]}>
+            <View style={[a.flex_row, a.align_center, a.gap_md, a.flex_1]}>
+              <UserAvatar
+                type="user"
+                size={PFP_SIZE}
+                avatar={persona?.avatar_url ?? undefined}
+              />
+              <View style={[a.flex_row, a.align_center, a.flex_1, a.gap_xs]}>
+                <Text
+                  style={[a.text_md, a.font_semi_bold, t.atoms.text]}
+                  numberOfLines={1}>
+                  {displayName}
+                </Text>
+                <View
+                  style={[
+                    {
+                      backgroundColor: '#0085ff',
+                      paddingHorizontal: 5,
+                      paddingVertical: 1,
+                      borderRadius: 4,
+                    },
+                  ]}>
+                  <Text
+                    style={[{color: '#fff', fontSize: 9, fontWeight: '700'}]}>
+                    AI
+                  </Text>
+                </View>
+              </View>
+            </View>
+            {persona && (
+              <Text
+                style={[
+                  a.text_xs,
+                  t.atoms.text_contrast_low,
+                  {marginLeft: PFP_SIZE + 16},
+                ]}
+                numberOfLines={1}>
+                {persona.status === 'loading'
+                  ? `Loading posts... (${persona.post_count} so far)`
+                  : `${persona.post_count} posts loaded`}
+              </Text>
+            )}
+          </View>
+          <View style={[{minHeight: PFP_SIZE}, a.justify_center]}>
+            <Layout.Header.Slot />
+          </View>
+        </View>
       </Layout.Header.Outer>
 
       <Layout.Center style={[a.flex_1]}>
