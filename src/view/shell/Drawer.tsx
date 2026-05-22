@@ -31,6 +31,7 @@ import {
 } from '#/components/icons/Bell'
 import {Bookmark, BookmarkFilled} from '#/components/icons/Bookmark'
 import {BulletList_Stroke2_Corner0_Rounded as List} from '#/components/icons/BulletList'
+import {Globe_Stroke2_Corner0_Rounded as Globe} from '#/components/icons/Globe'
 import {
   Hashtag_Filled_Corner0_Rounded as HashtagFilled,
   Hashtag_Stroke2_Corner0_Rounded as Hashtag,
@@ -222,6 +223,11 @@ let DrawerContent = ({}: React.PropsWithoutRef<{}>): React.ReactNode => {
     setDrawerOpen(false)
   }, [navigation, setDrawerOpen])
 
+  const onPressNetworkStats = useCallback(() => {
+    navigation.navigate('BskyStats')
+    setDrawerOpen(false)
+  }, [navigation, setDrawerOpen])
+
   const onPressLists = useCallback(() => {
     navigation.navigate('Lists')
     setDrawerOpen(false)
@@ -292,6 +298,7 @@ let DrawerContent = ({}: React.PropsWithoutRef<{}>): React.ReactNode => {
               isActive={isAtNotifications}
               onPress={onPressNotifications}
             />
+            <NetworkStatsMenuItem onPress={onPressNetworkStats} />
             <FeedsMenuItem isActive={isAtFeeds} onPress={onPressMyFeeds} />
             <ListsMenuItem onPress={onPressLists} />
             <BookmarksMenuItem
@@ -478,6 +485,23 @@ let AiChatMenuItem = ({onPress}: {onPress: () => void}): React.ReactNode => {
   )
 }
 AiChatMenuItem = memo(AiChatMenuItem)
+
+let NetworkStatsMenuItem = ({
+  onPress,
+}: {
+  onPress: () => void
+}): React.ReactNode => {
+  const {_} = useLingui()
+  const t = useTheme()
+  return (
+    <MenuItem
+      icon={<Globe style={[t.atoms.text]} width={iconWidth} />}
+      label={_(msg`Network Stats`)}
+      onPress={onPress}
+    />
+  )
+}
+NetworkStatsMenuItem = memo(NetworkStatsMenuItem)
 
 let NotificationsMenuItem = ({
   isActive,
