@@ -161,10 +161,13 @@ export const APP_CONFIG_URL = IS_DEV
  * version, so the @env fallback guarantees the values reach the bundle.
  */
 
+// On native, the react-native-dotenv babel plugin replaces require('@env')
+// at build time.  On web, the module doesn't exist — the dynamic require
+// prevents webpack from emitting a "Module not found" warning.
+const _envModule = '@' + 'env' // opaque to static analysis
 const _dotenv: Record<string, string | undefined> = (() => {
   try {
-    // react-native-dotenv babel plugin replaces this at build time
-    return require('@env')
+    return require(_envModule)
   } catch {
     return {}
   }
