@@ -155,29 +155,33 @@ export const APP_CONFIG_URL = IS_DEV
 /**
  * Bluesky Feed Consumer (bsky-stats) backend URL and API key.
  *
- * We read from both Expo's built-in process.env inlining AND the
- * react-native-dotenv @env module.  Expo inlines EXPO_PUBLIC_* on web
- * but can silently miss them on native iOS depending on SDK/Metro
- * version, so the @env fallback guarantees the values reach the bundle.
+ * process.env.EXPO_PUBLIC_* is inlined by Metro at build time on web,
+ * but can be unreliable on native iOS.  The react-native-dotenv babel
+ * plugin provides a second path: it reads .env at build time and
+ * replaces the static `require('@env')` call with literal values.
+ *
+ * IMPORTANT: `require('@env')` MUST be a static string literal — the
+ * babel plugin matches by AST pattern.  Do NOT obfuscate it.
  */
-
-// On native, the react-native-dotenv babel plugin replaces require('@env')
-// at build time.  On web, the module doesn't exist — the dynamic require
-// prevents webpack from emitting a "Module not found" warning.
-const _envModule = '@' + 'env' // opaque to static analysis
-const _dotenv: Record<string, string | undefined> = (() => {
-  try {
-    return require(_envModule)
-  } catch {
-    return {}
-  }
-})()
+let _envBaseUrl: string | undefined
+let _envApiKey: string | undefined
+try {
+  // @ts-expect-error - react-native-dotenv babel plugin replaces this at build time
+  const _env = require('@env')
+  _envBaseUrl = _env.EXPO_PUBLIC_BSKY_STATS_BASE_URL
+  _envApiKey = _env.EXPO_PUBLIC_BSKY_STATS_API_KEY
+} catch {
+  // @env not available (shouldn't happen — babel plugin handles this)
+}
 
 export const BSKY_STATS_BASE_URL: string =
-  process.env.EXPO_PUBLIC_BSKY_STATS_BASE_URL ||
-  _dotenv.EXPO_PUBLIC_BSKY_STATS_BASE_URL ||
-  ''
+  process.env.EXPO_PUBLIC_BSKY_STATS_BASE_URL || _envBaseUrl || ''
 export const BSKY_STATS_API_KEY: string =
-  process.env.EXPO_PUBLIC_BSKY_STATS_API_KEY ||
-  _dotenv.EXPO_PUBLIC_BSKY_STATS_API_KEY ||
-  ''
+  process.env.EXPO_PUBLIC_BSKY_STATS_API_KEY || _envApiKey || ''
+
+// Temporary: log resolved values so we can confirm env loading on native
+console.warn(
+  '[bsky-env]',
+  BSKY_STATS_BASE_URL ? `url=${BSKY_STATS_BASE_URL}` : 'url=EMPTY',
+  BSKY_STATS_API_KEY ? 'key=SET' : 'key=EMPTY',
+)
