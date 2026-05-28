@@ -242,6 +242,11 @@ export interface ChatStreamCallbacks {
 
 /**
  * Send a chat message and stream the AI response token-by-token.
+ *
+ * Uses XMLHttpRequest with `onprogress` for incremental streaming.
+ * RN 0.81's native fetch leaves `response.body` null for streaming
+ * responses, so XHR is the only reliable cross-platform approach.
+ *
  * Returns an AbortController the caller can use to cancel.
  */
 export function sendChatMessage(
@@ -252,73 +257,75 @@ export function sendChatMessage(
   const controller = new AbortController()
   const url = `${_baseUrl}/personas/${encodeURIComponent(handle)}/chat`
 
-  fetch(url, {
-    method: 'POST',
-    headers: headers(),
-    body: JSON.stringify({message}),
-    signal: controller.signal,
-    // React Native requires this option to expose res.body as a ReadableStream
-    // @ts-expect-error - RN-specific fetch option, not in standard RequestInit
-    reactNative: {textStreaming: true},
+  const xhr = new XMLHttpRequest()
+  let seenIndex = 0
+  let sseBuffer = ''
+  let aborted = false
+
+  // Wire AbortController to XHR so callers can cancel the same way
+  controller.signal.addEventListener('abort', () => {
+    aborted = true
+    xhr.abort()
   })
-    .then(async res => {
-      if (!res.ok) {
-        let detail: string | undefined
+
+  xhr.open('POST', url)
+  xhr.setRequestHeader('X-Api-Key', _apiKey)
+  xhr.setRequestHeader('Content-Type', 'application/json')
+
+  xhr.onprogress = () => {
+    if (aborted) return
+
+    const newText = xhr.responseText.slice(seenIndex)
+    seenIndex = xhr.responseText.length
+
+    sseBuffer += newText
+    const lines = sseBuffer.split('\n')
+    sseBuffer = lines.pop() ?? ''
+
+    let currentEvent = ''
+    for (const line of lines) {
+      const trimmed = line.replace(/\r$/, '')
+      if (trimmed.startsWith('event: ')) {
+        currentEvent = trimmed.slice(7).trim()
+      } else if (trimmed.startsWith('data: ')) {
+        const data = trimmed.slice(6)
         try {
-          const body = await res.json()
-          detail = body.detail
-        } catch {
-          // not JSON
-        }
-        callbacks.onError(detail ?? `HTTP ${res.status}`)
-        return
-      }
-
-      const reader = res.body?.getReader()
-      if (!reader) {
-        callbacks.onError('No response body')
-        return
-      }
-
-      const decoder = new TextDecoder()
-      let buffer = ''
-
-      while (true) {
-        const {done, value} = await reader.read()
-        if (done) break
-
-        buffer += decoder.decode(value, {stream: true})
-        const lines = buffer.split('\n')
-        // Keep the last (possibly incomplete) line in the buffer
-        buffer = lines.pop() ?? ''
-
-        let currentEvent = ''
-        for (const line of lines) {
-          if (line.startsWith('event: ')) {
-            currentEvent = line.slice(7).trim()
-          } else if (line.startsWith('data: ')) {
-            const data = line.slice(6)
-            try {
-              const parsed = JSON.parse(data)
-              if (currentEvent === 'token') {
-                callbacks.onToken(parsed.text)
-              } else if (currentEvent === 'done') {
-                callbacks.onDone(parsed.full_text, parsed.context_posts_used)
-              } else if (currentEvent === 'error') {
-                callbacks.onError(parsed.error)
-              }
-            } catch {
-              // Malformed JSON — skip
-            }
-            currentEvent = ''
+          const parsed = JSON.parse(data)
+          if (currentEvent === 'token') {
+            callbacks.onToken(parsed.text)
+          } else if (currentEvent === 'done') {
+            callbacks.onDone(parsed.full_text, parsed.context_posts_used)
+          } else if (currentEvent === 'error') {
+            callbacks.onError(parsed.error)
           }
+        } catch {
+          // Malformed JSON — skip
         }
+        currentEvent = ''
       }
-    })
-    .catch(err => {
-      if (controller.signal.aborted) return
-      callbacks.onError(err instanceof Error ? err.message : String(err))
-    })
+    }
+  }
+
+  xhr.onerror = () => {
+    if (aborted) return
+    callbacks.onError('Network error')
+  }
+
+  xhr.onloadend = () => {
+    if (aborted) return
+    if (xhr.status !== 0 && xhr.status !== 200) {
+      let detail: string | undefined
+      try {
+        const body = JSON.parse(xhr.responseText)
+        detail = body.detail
+      } catch {
+        // not JSON
+      }
+      callbacks.onError(detail ?? `HTTP ${xhr.status}`)
+    }
+  }
+
+  xhr.send(JSON.stringify({message}))
 
   return controller
 }
