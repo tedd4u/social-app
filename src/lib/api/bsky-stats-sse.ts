@@ -119,6 +119,9 @@ export function connectStatsSSE(
       const res = await fetch(`${baseUrl}/sse/stats`, {
         headers: {'X-Api-Key': apiKey},
         signal: controller.signal,
+        // React Native requires this option to expose res.body as a ReadableStream
+        // @ts-expect-error - RN-specific fetch option, not in standard RequestInit
+        reactNative: {textStreaming: true},
       })
 
       if (!res.ok) {

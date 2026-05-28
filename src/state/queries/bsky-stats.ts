@@ -98,9 +98,9 @@ export function useStatsStream(apiKey: string, enabled: boolean = true) {
     const connection = connectStatsSSE(apiKey, {
       onSnapshot: handleData,
       onUpdate: handleData,
-      onError: _err => {
+      onError: err => {
         // Errors are handled by the SSE client (auto-reconnect).
-        // Could add logging here in future.
+        console.warn('[bsky-stats-sse] Stream error:', err.message)
       },
     })
     connectionRef.current = connection

@@ -257,6 +257,9 @@ export function sendChatMessage(
     headers: headers(),
     body: JSON.stringify({message}),
     signal: controller.signal,
+    // React Native requires this option to expose res.body as a ReadableStream
+    // @ts-expect-error - RN-specific fetch option, not in standard RequestInit
+    reactNative: {textStreaming: true},
   })
     .then(async res => {
       if (!res.ok) {
