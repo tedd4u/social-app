@@ -105,18 +105,24 @@ export function connectStatsSSE(
   }
 
   async function connect() {
-    if (closed) return
+    if (closed) {
+      console.warn('[bsky-sse] connect() skipped — closed')
+      return
+    }
 
     const baseUrl = getBaseUrl()
+    console.warn('[bsky-sse] connect()', baseUrl || 'NO-BASE-URL')
     if (!baseUrl) {
       callbacks.onError(new Error('BskyStats client not configured'))
       return
     }
 
     controller = new AbortController()
+    const url = `${baseUrl}/sse/stats`
 
     try {
-      const res = await fetch(`${baseUrl}/sse/stats`, {
+      console.warn(`[bsky-sse] fetching ${url}`)
+      const res = await fetch(url, {
         headers: {'X-Api-Key': apiKey},
         signal: controller.signal,
         // React Native requires this option to expose res.body as a ReadableStream
@@ -124,25 +130,34 @@ export function connectStatsSSE(
         reactNative: {textStreaming: true},
       })
 
+      console.warn(
+        `[bsky-sse] fetch response: ${res.status}, body=${!!res.body}`,
+      )
       if (!res.ok) {
         throw new Error(`SSE connect failed: HTTP ${res.status}`)
       }
 
       const reader = res.body?.getReader()
       if (!reader) {
-        throw new Error('No response body for SSE stream')
+        throw new Error(
+          `No response body for SSE stream (body type: ${typeof res.body})`,
+        )
       }
 
       // Connected successfully — reset backoff
       backoff = INITIAL_BACKOFF_MS
       callbacks.onConnected?.()
+      console.warn('[bsky-sse] connected, reading stream...')
 
       const decoder = new TextDecoder()
       let buffer = ''
 
       while (!closed) {
         const {done, value} = await reader.read()
-        if (done) break
+        if (done) {
+          console.warn('[bsky-sse] stream done (server closed)')
+          break
+        }
 
         buffer += decoder.decode(value, {stream: true})
         const {events, remainder} = parseSSEChunk(buffer)
@@ -162,8 +177,15 @@ export function connectStatsSSE(
         }
       }
     } catch (err) {
-      if (closed) return
-      if (err instanceof Error && err.name === 'AbortError') return
+      if (closed) {
+        console.warn('[bsky-sse] error after close (expected)')
+        return
+      }
+      if (err instanceof Error && err.name === 'AbortError') {
+        console.warn('[bsky-sse] aborted')
+        return
+      }
+      console.warn('[bsky-sse] ERROR:', err)
       callbacks.onError(err instanceof Error ? err : new Error(String(err)))
     }
 
