@@ -141,6 +141,8 @@ async function request<T>(path: string, opts?: RequestInit): Promise<T> {
 
   let res: Response
   try {
+    // TODO: remove debug logging after native iOS is verified working
+    console.warn(`[bsky-stats] ${opts?.method ?? 'GET'} ${url}`)
     res = await fetch(url, {
       ...opts,
       headers: {
@@ -148,7 +150,9 @@ async function request<T>(path: string, opts?: RequestInit): Promise<T> {
         ...(opts?.headers as Record<string, string>),
       },
     })
+    console.warn(`[bsky-stats] ${res.status} ${url}`)
   } catch (err) {
+    console.warn(`[bsky-stats] NETWORK ERROR: ${url}`, err)
     throw new BskyStatsError(
       `Network error: ${err instanceof Error ? err.message : String(err)}`,
       0,
