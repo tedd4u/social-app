@@ -1,8 +1,11 @@
 /**
  * SSE client for the live stats stream from /sse/stats.
  *
- * Uses a plain fetch + ReadableStream approach (works in both web and RN)
- * rather than the EventSource API, which has spotty RN support.
+ * Uses XMLHttpRequest with incremental `onprogress` parsing rather than
+ * the Fetch/ReadableStream API.  RN 0.81's native fetch does not resolve
+ * the promise for streaming responses (SSE), so the fetch call hangs
+ * forever.  XHR's `onprogress` fires as chunks arrive on both web and
+ * native, making it the reliable cross-platform choice.
  *
  * Provides auto-reconnect with exponential backoff.
  */
@@ -85,12 +88,18 @@ export function parseSSEChunk(buffer: string): {
 const INITIAL_BACKOFF_MS = 1_000
 const MAX_BACKOFF_MS = 30_000
 
+/**
+ * Reconnect after this many bytes to prevent unbounded responseText growth.
+ * XHR accumulates the full response in memory — this caps it.
+ */
+const MAX_RESPONSE_BYTES = 2 * 1024 * 1024 // 2 MB
+
 export function connectStatsSSE(
   apiKey: string,
   callbacks: StatsSSECallbacks,
 ): StatsSSEConnection {
   let closed = false
-  let controller: AbortController | null = null
+  let xhr: XMLHttpRequest | null = null
   let backoff = INITIAL_BACKOFF_MS
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -104,95 +113,85 @@ export function connectStatsSSE(
     backoff = Math.min(backoff * 2, MAX_BACKOFF_MS)
   }
 
-  async function connect() {
-    if (closed) {
-      console.warn('[bsky-sse] connect() skipped — closed')
-      return
-    }
+  function connect() {
+    if (closed) return
 
     const baseUrl = getBaseUrl()
-    console.warn('[bsky-sse] connect()', baseUrl || 'NO-BASE-URL')
     if (!baseUrl) {
       callbacks.onError(new Error('BskyStats client not configured'))
       return
     }
 
-    controller = new AbortController()
     const url = `${baseUrl}/sse/stats`
+    console.warn(`[bsky-sse] connecting ${url}`)
 
-    try {
-      console.warn(`[bsky-sse] fetching ${url}`)
-      const res = await fetch(url, {
-        headers: {'X-Api-Key': apiKey},
-        signal: controller.signal,
-        // React Native requires this option to expose res.body as a ReadableStream
-        // @ts-expect-error - RN-specific fetch option, not in standard RequestInit
-        reactNative: {textStreaming: true},
-      })
+    const req = new XMLHttpRequest()
+    xhr = req
 
-      console.warn(
-        `[bsky-sse] fetch response: ${res.status}, body=${!!res.body}`,
-      )
-      if (!res.ok) {
-        throw new Error(`SSE connect failed: HTTP ${res.status}`)
+    // Track how much of responseText we've already parsed
+    let seenIndex = 0
+    let sseBuffer = ''
+    let connected = false
+
+    req.open('GET', url)
+    req.setRequestHeader('X-Api-Key', apiKey)
+
+    req.onprogress = () => {
+      if (closed) return
+
+      if (!connected) {
+        connected = true
+        backoff = INITIAL_BACKOFF_MS
+        callbacks.onConnected?.()
+        console.warn('[bsky-sse] connected, receiving events')
       }
 
-      const reader = res.body?.getReader()
-      if (!reader) {
-        throw new Error(
-          `No response body for SSE stream (body type: ${typeof res.body})`,
-        )
-      }
+      // Extract only the new text since our last read
+      const newText = req.responseText.slice(seenIndex)
+      seenIndex = req.responseText.length
 
-      // Connected successfully — reset backoff
-      backoff = INITIAL_BACKOFF_MS
-      callbacks.onConnected?.()
-      console.warn('[bsky-sse] connected, reading stream...')
+      // Parse SSE events from the new chunk
+      sseBuffer += newText
+      const {events, remainder} = parseSSEChunk(sseBuffer)
+      sseBuffer = remainder
 
-      const decoder = new TextDecoder()
-      let buffer = ''
-
-      while (!closed) {
-        const {done, value} = await reader.read()
-        if (done) {
-          console.warn('[bsky-sse] stream done (server closed)')
-          break
-        }
-
-        buffer += decoder.decode(value, {stream: true})
-        const {events, remainder} = parseSSEChunk(buffer)
-        buffer = remainder
-
-        for (const evt of events) {
-          try {
-            const parsed = JSON.parse(evt.data) as StatsSnapshot
-            if (evt.event === 'snapshot') {
-              callbacks.onSnapshot(parsed)
-            } else if (evt.event === 'update') {
-              callbacks.onUpdate(parsed)
-            }
-          } catch {
-            // Malformed JSON — skip this event
+      for (const evt of events) {
+        try {
+          const parsed = JSON.parse(evt.data) as StatsSnapshot
+          if (evt.event === 'snapshot') {
+            callbacks.onSnapshot(parsed)
+          } else if (evt.event === 'update') {
+            callbacks.onUpdate(parsed)
           }
+        } catch {
+          // Malformed JSON — skip this event
         }
       }
-    } catch (err) {
-      if (closed) {
-        console.warn('[bsky-sse] error after close (expected)')
-        return
+
+      // Reconnect if responseText has grown too large (prevents memory leak)
+      if (req.responseText.length > MAX_RESPONSE_BYTES) {
+        console.warn('[bsky-sse] buffer cap reached, reconnecting')
+        req.abort()
+        // onloadend will fire and trigger reconnect
       }
-      if (err instanceof Error && err.name === 'AbortError') {
-        console.warn('[bsky-sse] aborted')
-        return
-      }
-      console.warn('[bsky-sse] ERROR:', err)
-      callbacks.onError(err instanceof Error ? err : new Error(String(err)))
     }
 
-    // Stream ended or errored — reconnect
-    if (!closed) {
+    req.onerror = () => {
+      if (closed) return
+      console.warn('[bsky-sse] XHR error')
+      callbacks.onError(new Error('SSE connection error'))
+    }
+
+    req.onloadend = () => {
+      if (closed) return
+      console.warn(`[bsky-sse] ended (status=${req.status}), reconnecting`)
+      if (req.status !== 0 && req.status !== 200) {
+        callbacks.onError(new Error(`SSE connect failed: HTTP ${req.status}`))
+      }
       scheduleReconnect()
     }
+
+    req.send()
   }
 
   // Start first connection
@@ -201,7 +200,8 @@ export function connectStatsSSE(
   return {
     close() {
       closed = true
-      controller?.abort()
+      xhr?.abort()
+      xhr = null
       if (reconnectTimer !== null) {
         clearTimeout(reconnectTimer)
         reconnectTimer = null
