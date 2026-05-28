@@ -399,33 +399,69 @@ describe('SSE event parsing', () => {
 // Chat SSE streaming (sendChatMessage)
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// XHR mock for sendChatMessage tests
+// ---------------------------------------------------------------------------
+
+class MockXHR {
+  method = ''
+  url = ''
+  requestHeaders: Record<string, string> = {}
+  body: string | null = null
+  status = 0
+  responseText = ''
+  onprogress: (() => void) | null = null
+  onerror: (() => void) | null = null
+  onloadend: (() => void) | null = null
+  aborted = false
+
+  open(method: string, url: string) {
+    this.method = method
+    this.url = url
+  }
+
+  setRequestHeader(name: string, value: string) {
+    this.requestHeaders[name] = value
+  }
+
+  send(body?: string | null) {
+    this.body = body ?? null
+  }
+
+  abort() {
+    this.aborted = true
+  }
+
+  /** Test helper: simulate server streaming chunks then closing */
+  _receiveChunks(chunks: string[]) {
+    this.status = 200
+    for (const chunk of chunks) {
+      this.responseText += chunk
+      this.onprogress?.()
+    }
+    this.onloadend?.()
+  }
+
+  /** Test helper: simulate an HTTP error */
+  _failWith(status: number, body: string) {
+    this.status = status
+    this.responseText = body
+    this.onloadend?.()
+  }
+}
+
+let lastMockXhr: MockXHR
+
+beforeEach(() => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(global as any).XMLHttpRequest = jest.fn(() => {
+    lastMockXhr = new MockXHR()
+    return lastMockXhr
+  })
+})
+
 describe('sendChatMessage', () => {
   it('sends POST with correct URL, headers, and body', () => {
-    const chunks = [
-      'event: token\ndata: {"text":"Hello"}\n\n',
-      'event: done\ndata: {"full_text":"Hello","context_posts_used":10}\n\n',
-    ]
-    let chunkIndex = 0
-
-    const mockReader = {
-      read: jest
-        .fn<() => Promise<{done: boolean; value: Uint8Array | undefined}>>()
-        .mockImplementation(() => {
-          if (chunkIndex < chunks.length) {
-            const chunk = new TextEncoder().encode(chunks[chunkIndex++])
-            return Promise.resolve({done: false, value: chunk})
-          }
-          return Promise.resolve({done: true, value: undefined})
-        }),
-    }
-
-    const fetchMock = jest.fn<typeof fetch>().mockResolvedValue({
-      ok: true,
-      status: 200,
-      body: {getReader: () => mockReader},
-    } as unknown as Response)
-    global.fetch = fetchMock
-
     const callbacks: ChatStreamCallbacks = {
       onToken: jest.fn(),
       onDone: jest.fn(),
@@ -434,25 +470,14 @@ describe('sendChatMessage', () => {
 
     sendChatMessage('test.bsky.social', 'Hi there', callbacks)
 
-    // Verify fetch was called with correct params
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-    const [url, opts] = fetchMock.mock.calls[0]
-    expect(url).toBe(`${MOCK_BASE}/personas/test.bsky.social/chat`)
-    expect((opts as RequestInit).method).toBe('POST')
-    expect(JSON.parse((opts as RequestInit).body as string)).toEqual({
-      message: 'Hi there',
-    })
+    expect(lastMockXhr.method).toBe('POST')
+    expect(lastMockXhr.url).toBe(`${MOCK_BASE}/personas/test.bsky.social/chat`)
+    expect(lastMockXhr.requestHeaders['X-Api-Key']).toBe(MOCK_KEY)
+    expect(lastMockXhr.requestHeaders['Content-Type']).toBe('application/json')
+    expect(JSON.parse(lastMockXhr.body!)).toEqual({message: 'Hi there'})
   })
 
-  it('calls onError when HTTP response is not ok', async () => {
-    const fetchMock = jest.fn<typeof fetch>().mockResolvedValue({
-      ok: false,
-      status: 409,
-      json: () => Promise.resolve({detail: 'Persona not ready'}),
-      body: null,
-    } as unknown as Response)
-    global.fetch = fetchMock
-
+  it('streams tokens and fires onDone', () => {
     const callbacks: ChatStreamCallbacks = {
       onToken: jest.fn(),
       onDone: jest.fn(),
@@ -461,13 +486,33 @@ describe('sendChatMessage', () => {
 
     sendChatMessage('test.bsky.social', 'Hi', callbacks)
 
-    // Wait for the async error handling
-    await new Promise(resolve => setTimeout(resolve, 50))
+    lastMockXhr._receiveChunks([
+      'event: token\ndata: {"text":"Hello"}\n\n',
+      'event: token\ndata: {"text":" world"}\n\n',
+      'event: done\ndata: {"full_text":"Hello world","context_posts_used":5}\n\n',
+    ])
+
+    expect(callbacks.onToken).toHaveBeenCalledTimes(2)
+    expect(callbacks.onToken).toHaveBeenNthCalledWith(1, 'Hello')
+    expect(callbacks.onToken).toHaveBeenNthCalledWith(2, ' world')
+    expect(callbacks.onDone).toHaveBeenCalledWith('Hello world', 5)
+    expect(callbacks.onError).not.toHaveBeenCalled()
+  })
+
+  it('calls onError when HTTP response is not ok', () => {
+    const callbacks: ChatStreamCallbacks = {
+      onToken: jest.fn(),
+      onDone: jest.fn(),
+      onError: jest.fn(),
+    }
+
+    sendChatMessage('test.bsky.social', 'Hi', callbacks)
+    lastMockXhr._failWith(409, '{"detail":"Persona not ready"}')
+
     expect(callbacks.onError).toHaveBeenCalledWith('Persona not ready')
   })
 
   it('returns an AbortController for cancellation', () => {
-    mockFetchJson({}, 200)
     const callbacks: ChatStreamCallbacks = {
       onToken: jest.fn(),
       onDone: jest.fn(),
@@ -478,5 +523,6 @@ describe('sendChatMessage', () => {
     expect(controller.signal.aborted).toBe(false)
     controller.abort()
     expect(controller.signal.aborted).toBe(true)
+    expect(lastMockXhr.aborted).toBe(true)
   })
 })
